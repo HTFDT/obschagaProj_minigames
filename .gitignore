@@ -1,0 +1,10 @@
+.vscode
+log.txt
+errors.txt
+traceback.txt
+*.rpyc
+game/autocoding/test.py
+game/saves
+*.rpym
+*.rpymc
+game/cache

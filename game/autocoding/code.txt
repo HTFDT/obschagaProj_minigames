@@ -1,0 +1,20 @@
+import loader
+import models
+import middlewares
+import utils
+from aiogram.utils.executor import Executor
+from handlers import dp
+
+executor = Executor(dp, skip_updates=True)
+
+
+def main():
+    loader.setup(executor)
+    models.setup(executor)
+    middlewares.setup(executor)
+    utils.setup(executor)
+    executor.start_polling()
+
+
+if __name__ == '__main__':
+    main()
