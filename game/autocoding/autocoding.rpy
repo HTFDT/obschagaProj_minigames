@@ -1,60 +1,71 @@
-init:
-    image bg autocoding = "images/autocoding/bg_autocoding.png"
+init -2 python:
+    class AutoText(renpy.Displayable):
+        def __init__(self, filename, speed, **kwargs):
+            import os
+            super(AutoText, self).__init__(**kwargs)
 
-    python:
-        res = None
+            self.speed = speed
+            filepath = os.path.abspath(os.path.join(config.basedir, "game", "autocoding", filename))
+            file = open(filepath, "r")
+            self.code = file.read()
+            self.code_pos = 0
+            self.dcode = ""
+            self.ended = False
+            self.line_cnt = 0
+            file.close()
+    
+        def render(self, width, height, st, at):
+            dtext = Text(self.dcode, color="#1eff00", size=14)
+            child_render = renpy.render(dtext, width, height, st, at)
 
-        class Autocoding(renpy.Displayable):
-            def __init__(self, filename, speed=1):
-                import os
-                renpy.Displayable.__init__(self, speed)
+            self.width, self.height = child_render.get_size()
 
-                self.speed = speed
-                filepath = os.path.abspath(os.path.join(config.basedir, "game", "autocoding", filename))
-                file = open(filepath, "r")
-                self.code = file.read()
-                self.code_pos = 0
-                self.dcode = ""
-                self.ended = False
-                file.close()
-            
-            def render(self, width, height, st, at):
-                code = Text(self.dcode, color="#28f903", size=14)
-                # width: 927, heigth: 621
-                render = renpy.render(code, 927, 621, st, at)
-                r = renpy.Render(width, height)
-                position = r.get_size()
-                r.blit(render, (497, 260))
-                return r
-            
-            def event(self, ev, x, y, st):
-                import pygame
-                # костыль ебаный
-                global res
+            render = renpy.Render(self.width, self.height)
+            render.blit(child_render, (0, 0))
+            return render
+        
+        def event(self, ev, x, y, st):
+            import pygame
 
-                if ev.type == pygame.KEYDOWN:
-                    if self.ended:
-                        res = "something"
-                        renpy.end_interaction(True)
-
-                    if self.code_pos + self.speed <= len(self.code):
-                        self.dcode += self.code[self.code_pos:self.code_pos + self.speed]
-                        self.code_pos += self.speed
-                    else:
-                        self.dcode += self.code[self.code_pos:]
-                        self.ended = True 
-
+            if ev.type == pygame.KEYDOWN:
+                if ev.key == pygame.K_ESCAPE:
+                    return
+                if self.ended:
+                    return True
+                self.add_text()
+                if self.height >= 575:
+                    self.dcode = ""
                 renpy.redraw(self, 0)
-                raise renpy.IgnoreEvent()
+                if not self.ended:
+                    raise renpy.IgnoreEvent()
 
-# блять короче лучше все делать скринами, потому что дисплейебли сами по себе без скрина хуйня
+        def add_text(self):
+            if self.code_pos + self.speed <= len(self.code):
+                self.dcode += self.code[self.code_pos:self.code_pos + self.speed]
+            else:
+                self.dcode += self.code[self.code_pos:len(self.code)]
+                self.ended = True
+            self.code_pos += self.speed
+
+
+
 screen autocoding_screen():
-    add Autocoding("code.txt", 10)
+    modal True
+    zorder 5
+    frame:
+        background Image("images/autocoding/bg_autocoding.png")
+        frame:
+            background None
+            xpadding 5
+            area (497, 260, 927, 575)
+            add AutoText("code.txt", 20)
+        
+        # vbar value YScrollValue("viewport_autocoding") # Бар, как второй элемент hbox-а.
+    # add Autocoding("code.txt", 10)
 
 
 label autocoding:
     window hide
-    scene bg autocoding
 
     call screen autocoding_screen()
 
@@ -62,7 +73,7 @@ label autocoding:
 
     window show 
 
-    "Текст кончился. Возвращенное значение: [res]"
+    "Текст кончился"
 
     return
 
