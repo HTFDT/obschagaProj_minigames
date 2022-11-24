@@ -1,4 +1,5 @@
-init -2 python:
+init python:
+    text_ended = False
     class AutoText(renpy.Displayable):
         def __init__(self, filename, speed, **kwargs):
             import os
@@ -26,18 +27,20 @@ init -2 python:
         
         def event(self, ev, x, y, st):
             import pygame
+            global text_ended
 
             if ev.type == pygame.KEYDOWN:
                 if ev.key == pygame.K_ESCAPE:
                     return
                 if self.ended:
+                    text_ended = True
                     return True
                 self.add_text()
                 if self.height >= 575:
                     self.dcode = ""
-                renpy.redraw(self, 0)
-                if not self.ended:
-                    raise renpy.IgnoreEvent()
+                if not self.ended and not text_ended:
+                    renpy.redraw(self, 0)   
+                raise renpy.IgnoreEvent()
 
         def add_text(self):
             if self.code_pos + self.speed <= len(self.code):
@@ -51,7 +54,7 @@ init -2 python:
 
 screen autocoding_screen():
     modal True
-    zorder 5
+
     frame:
         background Image("images/autocoding/bg_autocoding.png")
         frame:
@@ -60,20 +63,30 @@ screen autocoding_screen():
             area (497, 260, 927, 575)
             add AutoText("code.txt", 20)
         
-        # vbar value YScrollValue("viewport_autocoding") # Бар, как второй элемент hbox-а.
-    # add Autocoding("code.txt", 10)
+    showif text_ended:
+        text "success" color "#05c22b" size 100 at success_autocoding_transform
+        imagebutton:
+            idle "autocoding/remove.png"
+            align 0.95, 0.05
+            anchor .5, .5
+            xsize 30
+            ysize 30
+            action Return()
 
 
 label autocoding:
+    "бла бла"
+
     window hide
 
-    call screen autocoding_screen()
+    show screen autocoding_screen
+    $ renpy.pause(modal=True)
 
-    scene black
+    window show
+    
+    "{cps=10}Похоже, у меня получилось{/cps}{nw}"
 
-    window show 
-
-    "Текст кончился"
+    hide screen autocoding_screen
 
     return
 
