@@ -357,7 +357,8 @@ screen main_menu():
     vbox:
         pos (0.5, 0.5)
         anchor (0.5, 0.5)
-        textbutton "autocoding" action Start()
+        textbutton "autocoding" action Start("autocoding")
+        textbutton "tests" action Start("tests")
         textbutton _("Выход") action Quit()
 
     

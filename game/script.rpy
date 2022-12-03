@@ -9,8 +9,11 @@ define e = Character('Эйлин', color="#c8ffc8")
 # а eileen happy — "eileen happy.webp", и тогда они появятся в игре.
 
 # Игра начинается здесь:
-label start:
 
-    call autocoding
+
+label tests:
+    "start"
+
+    call screen viewport()
 
     return

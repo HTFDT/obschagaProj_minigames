@@ -1,33 +1,33 @@
-init:
-    python: #Borrowed code to show dialogue OVER other screens
-        class SayOnScreen(Action):
+# init:
+#     python: #Borrowed code to show dialogue OVER other screens
+#         class SayOnScreen(Action):
 
-            def __init__(self, label, *args, **kwargs):
-                self.old_clear_layers = config.context_clear_layers
-                self.label = label
-                self.args = args
-                self.kwargs = kwargs
+#             def __init__(self, label, *args, **kwargs):
+#                 self.old_clear_layers = config.context_clear_layers
+#                 self.label = label
+#                 self.args = args
+#                 self.kwargs = kwargs
 
-            def __call__(self):
-                renpy.config.context_clear_layers = [ ]
-                renpy.call_in_new_context('intermediary_sayonscreen',
-                    self.label, self.old_clear_layers,
-                    *self.args, **self.kwargs)
-
-
-label intermediary_sayonscreen(lbl, original_layers, *args, **kwargs): #Borrowed code to show dialogue OVER other screens
-    $ config.context_clear_layers = original_layers
-    $ renpy.call(lbl, *args, **kwargs)
-    return
+#             def __call__(self):
+#                 renpy.config.context_clear_layers = [ ]
+#                 renpy.call_in_new_context('intermediary_sayonscreen',
+#                     self.label, self.old_clear_layers,
+#                     *self.args, **self.kwargs)
 
 
-screen absorb_input(): #Borrowed code to block anything below while showing dialogue OVER other screens
-    # layer "above_screens" #added to bump this to a higher layer so I can blur the background.
-    zorder 1000
-    key 'dismiss' action Function(renpy.ui.saybehavior, allow_dismiss=renpy.config.say_allow_dismiss)
-    button:
-        xysize (config.screen_width, config.screen_height)
-        action Function(renpy.ui.saybehavior, allow_dismiss=renpy.config.say_allow_dismiss)
+# label intermediary_sayonscreen(lbl, original_layers, *args, **kwargs): #Borrowed code to show dialogue OVER other screens
+#     $ config.context_clear_layers = original_layers
+#     $ renpy.call(lbl, *args, **kwargs)
+#     return
+
+
+# screen absorb_input(): #Borrowed code to block anything below while showing dialogue OVER other screens
+#     # layer "above_screens" #added to bump this to a higher layer so I can blur the background.
+#     zorder 1000
+#     key 'dismiss' action Function(renpy.ui.saybehavior, allow_dismiss=renpy.config.say_allow_dismiss)
+#     button:
+#         xysize (config.screen_width, config.screen_height)
+#         action Function(renpy.ui.saybehavior, allow_dismiss=renpy.config.say_allow_dismiss)
 
 
 label test_say:

@@ -1,97 +1,100 @@
-init python:
-    text_ended = False
-    class AutoText(renpy.Displayable):
-        def __init__(self, filename, speed, **kwargs):
-            import os
-            super(AutoText, self).__init__(**kwargs)
+init:
+    python:
+        class SayOnScreen(Action):
+            def __init__(self, label, *args, **kwargs):
+                self.old_clear_layers = config.context_clear_layers
+                self.label = label
+                self.args = args
+                self.kwargs = kwargs
 
-            self.speed = speed
-            filepath = os.path.abspath(os.path.join(config.basedir, "game", "autocoding", filename))
-            file = open(filepath, "r")
-            self.code = file.read()
-            self.code_pos = 0
-            self.dcode = ""
-            self.ended = False
-            self.line_cnt = 0
-            file.close()
-    
-        def render(self, width, height, st, at):
-            dtext = Text(self.dcode, color="#1eff00", size=14)
-            child_render = renpy.render(dtext, width, height, st, at)
+            def __call__(self):
+                renpy.config.context_clear_layers = [ ]
+                renpy.call_in_new_context('intermediary_sayonscreen',
+                    self.label, self.old_clear_layers,
+                    *self.args, **self.kwargs)
 
-            self.width, self.height = child_render.get_size()
+        class Autocoding():
+            def __init__(self, filename, speed):
+                import string
+                alph = "йцукенгшщзхъфывапролджэячсмитьбю"
+                keymap = string.ascii_letters + string.digits + alph
+                self.keymap = list(keymap) + ["K_SPACE"]
+                filepath = os.path.abspath(os.path.join(config.basedir, "game", "autocoding", filename))
+                with open(filepath) as file:
+                    self.code = file.read()
+                self.code_pos = 0
+                self.dcode = ""
+                self.code_ended = False
+                self.speed = speed
+                self.yadj = ui.adjustment(ranged=self.ranged)
+            
+            def add_text(self):
+                if self.code_pos + self.speed <= len(self.code):
+                    self.dcode += self.code[self.code_pos:self.code_pos + self.speed]
+                else:
+                    self.dcode += self.code[self.code_pos:len(self.code)]
+                    self.code_ended = True
+                self.code_pos += self.speed
 
-            render = renpy.Render(self.width, self.height)
-            render.blit(child_render, (0, 0))
-            return render
-        
-        def event(self, ev, x, y, st):
-            import pygame
-            global text_ended
-
-            if ev.type == pygame.KEYDOWN:
-                if ev.key == pygame.K_ESCAPE:
-                    return
-                if self.ended:
-                    text_ended = True
-                    return True
-                self.add_text()
-                if self.height >= 575:
-                    self.dcode = ""
-                if not self.ended and not text_ended:
-                    renpy.redraw(self, 0)   
-                raise renpy.IgnoreEvent()
-
-        def add_text(self):
-            if self.code_pos + self.speed <= len(self.code):
-                self.dcode += self.code[self.code_pos:self.code_pos + self.speed]
-            else:
-                self.dcode += self.code[self.code_pos:len(self.code)]
-                self.ended = True
-            self.code_pos += self.speed
+            @staticmethod
+            def ranged(yadj):
+                yadj.value = yadj.range
 
 
+label intermediary_sayonscreen(lbl, original_layers, *args, **kwargs):
+    $ config.context_clear_layers = original_layers
+    # show screen absorb_input()
+    $ renpy.call(lbl, *args, **kwargs)
+    # hide screen absorb_input
+    return
 
-screen autocoding_screen():
+
+# screen absorb_input():
+    # layer "above_screens" #added to bump this to a higher layer so I can blur the background.
+    # zorder 1000
+    # key 'dismiss' action Function(renpy.ui.saybehavior, allow_dismiss=renpy.config.say_allow_dismiss)
+    # button:
+    #     xysize (config.screen_width, config.screen_height)
+    #     action Function(renpy.ui.saybehavior, allow_dismiss=renpy.config.say_allow_dismiss)
+
+
+label autocoding_saying():
+    "{cps=10}Похоже, у меня получилось{/cps}"
+    return
+
+
+screen autocoding_screen(autocoding):
     modal True
+    zorder 1
+    key autocoding.keymap action [autocoding.add_text, renpy.restart_interaction]
 
     frame:
-        background Image("images/autocoding/bg_autocoding.png")
-        frame:
-            background None
-            xpadding 5
-            area (497, 260, 927, 575)
-            add AutoText("code.txt", 20)
-        
-    showif text_ended:
-        text "success" color "#05c22b" size 100 at success_autocoding_transform
-        imagebutton:
-            idle "autocoding/remove.png"
-            align 0.95, 0.05
-            anchor .5, .5
-            xsize 30
-            ysize 30
-            action Return()
+        xysize 800, 600
+        anchor .5, .5
+        align .5, .5
+        viewport:
+            mousewheel "vertical"
+            yadjustment autocoding.yadj
+            text "[autocoding.dcode]" size 14 color "#0cc421"
 
-
-label autocoding:
-    "бла бла"
-
-    window hide
-
-    show screen autocoding_screen
-    $ renpy.pause(modal=True)
-
-    window show
+        showif autocoding.code_ended:
+            text "success" color "#05c22b" size 100 at success_autocoding_transform
+            timer .001 action SayOnScreen("autocoding_saying")
+            key 'dismiss' action [Return(), Hide("autocoding_screen")]
+            button:
+                xysize (config.screen_width, config.screen_height)
+                action [Return(), Hide("autocoding_screen")]
     
-    "{cps=10}Похоже, у меня получилось{/cps}{nw}"
 
-    hide screen autocoding_screen
+label autocoding():
+    "start"
+    
+    $ autocoding = Autocoding("code.txt", 50)
+    
+    call screen autocoding_screen(autocoding)
+
+    "end"
 
     return
 
 
-
-
-
-                
