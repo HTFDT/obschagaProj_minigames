@@ -43,19 +43,19 @@ init:
 
 label intermediary_sayonscreen(lbl, original_layers, *args, **kwargs):
     $ config.context_clear_layers = original_layers
-    # show screen absorb_input()
+    # $ renpy.show_layer_at(bg_blur, layer="screens")
+    show screen absorb_input()
     $ renpy.call(lbl, *args, **kwargs)
-    # hide screen absorb_input
+    hide screen absorb_input
     return
 
 
-# screen absorb_input():
-    # layer "above_screens" #added to bump this to a higher layer so I can blur the background.
-    # zorder 1000
-    # key 'dismiss' action Function(renpy.ui.saybehavior, allow_dismiss=renpy.config.say_allow_dismiss)
-    # button:
-    #     xysize (config.screen_width, config.screen_height)
-    #     action Function(renpy.ui.saybehavior, allow_dismiss=renpy.config.say_allow_dismiss)
+screen absorb_input():
+    zorder 1000
+    key 'dismiss' action Function(renpy.ui.saybehavior, allow_dismiss=renpy.config.say_allow_dismiss)
+    button:
+        xysize (config.screen_width, config.screen_height)
+        action Function(renpy.ui.saybehavior, allow_dismiss=renpy.config.say_allow_dismiss)
 
 
 label autocoding_saying():

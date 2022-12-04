@@ -358,6 +358,7 @@ screen main_menu():
         pos (0.5, 0.5)
         anchor (0.5, 0.5)
         textbutton "autocoding" action Start("autocoding")
+        textbutton "python_tasks" action Start("python_tasks")
         textbutton "tests" action Start("tests")
         textbutton _("Выход") action Quit()
 
