@@ -4,9 +4,9 @@ transform bg_blur:
 transform zooming:
     anchor (.5, .5)
     on hover:
-        linear .25 zoom 1.25
+        linear .15 zoom 1.1
     on idle:
-        linear .25 zoom 1.0
+        linear .15 zoom 1.0
 
 transform shake:
     on hover:

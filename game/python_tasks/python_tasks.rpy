@@ -1,9 +1,10 @@
 style submit_button_text:
-    anchor (.5, .5)
-    pos (.5, .5)
-    color "#fdfdfd"
+    yanchor .5
+    ypos .5
+    size 16 
+
+    color "#7e9093"
     font "fonts/JetBrainsMono-Light.ttf"
-    size 26
 
 style variants:
     color "#a7b8b8"
@@ -14,10 +15,13 @@ style variants:
 init -1 python:
     from abc import ABC, abstractmethod
     class Task(ABC):
-        def __init__(self, variants, answer):
+        def __init__(self, variants, answer, filename, question="", *hint):
             self.variants = variants
             self.answer = answer
             self.right = False
+            self.hint = hint
+            self.question = question
+            self.filepic = filename
         
         @abstractmethod
         def set_right(self):
@@ -59,16 +63,16 @@ init -1 python:
             self.ans_panel = True
             self.__current_task = 0
             self.tasks = [
-                RadioTask({"map": False, "split": False, "zip": False, "strip": False}, "split"),
-                RadioTask({"map": False, "split": False, "zip": False, "strip": False}, "split"),
+                RadioTask({"os.getcwd()": False, "os.path.join()": False, "os.path.realpath()": False, "os.path.split()": False}, "os.path.join()", "python_tasks/task_0/filepic.png", "Какой метод следует применить, чтобы устанить ошибку?", "Похоже, система не может найти нужный файл. Проблема пожет быть в типе операционной системы. Стоит впомнить модуль os..."),
+                RadioTask({"__add__": False, "__mul__": False, "__sub__": False, "__str__": False}, "__sub__", "python_tasks/task_1/filepic.png", "Какого специального метода не хватает?", "А тут какой-то класс, описывающий таймер. Ошибка точно в методе {i}run(){/i}, в классе не хватает какого-то специального метода..."),
+                RadioTask({"list": False, "dict": False, "set": False, "frozenset": False}, "set", "python_tasks/task_2/filepic.png", "Какую коллекцию лучше всего использовать для переменной {i}visited{/i}?", "Похоже на рекурсивный алгоритм обхода графа, но отсутствует коллекция, в которую должны складываться уже посещенные узлы... Какую бы лучше использовать?", "Да еще и этот граф... Может быть, в нем содержится что-то важное?"),
+                RadioTask({"wb": False, "w": False, "r": False, "a": False}, "a", "python_tasks/task_3/filepic.png", "Какой аргумент нужно передать функции {i}open{/i}, чтобы декоратор работал правильно?", "Скорее всего, это декоратор, предназначенный для логгирования вызовов функций. Но функции {i}open{/i} вообще не передано тегов, показывающих, как работать с файлом логов, скорее всего, проблема в этом."),
             ]
-
-        def set_result(self, result):
-            self.task_results[self.current_task] = result
+            self.panel_mode = "answer"
 
         @property
         def task(self):
-            return self.tasks[self.current_task]
+            return self.tasks[self.__current_task]
 
         @property
         def current_task(self):
@@ -79,6 +83,14 @@ init -1 python:
             self.__current_task = value
             self.task_ended = False
 
+        @property
+        def last_task(self):
+            return self.current_task + 1 == len(self.tasks)
+
+        @property
+        def right_tasks_rate(self):
+            return sum(int(task.right) for task in self.tasks) / len(self.tasks)
+
 
 screen python_tasks_screen(controller):
     modal True
@@ -86,100 +98,146 @@ screen python_tasks_screen(controller):
     fixed:
         frame:
             background "python_tasks/pycharm_bg.png"
-
-        viewport:
+        fixed:
             pos 28, 106
             xysize 1870, 890
-            mousewheel "vertical"        
+            viewport id "vp":
+                mousewheel "vertical"   
 
-            frame:
-                background "python_tasks/pycharm_task[controller.current_task].png"
+                add "python_tasks/task_[controller.current_task]/bg.png"
+            
+            vbar value YScrollValue("vp"):
+                xpos 1850
+                base_bar None
+                thumb "python_tasks/scrollbar.png"
 
-        showif controller.ans_panel:
-            frame:
-                pos 28, 650
-                xysize 1870, 349
-                background "python_tasks/variant_bg.png"
-                use variants_screen(controller)
+            showif controller.ans_panel:
+                use bottom_panel_screen(controller)
 
-        imagebutton at shake:
-            if controller.ans_panel:
-                idle "python_tasks/arrow_down.png"
-            else:
-                idle "python_tasks/arrow_up.png"
-            pos 28, 935
-            action ToggleVariable("controller.ans_panel")
+            imagebutton at shake:
+                pos 1725, 820
+                action ToggleVariable("controller.ans_panel")
+                if controller.ans_panel:
+                    idle "python_tasks/arrow_down.png"
+                else:
+                    idle "python_tasks/arrow_up.png"
+
+            button at zooming:
+                background "python_tasks/hint_btn.png"
+                xysize 64, 64
+                pos 1830, 850
+                action SayOnScreen("task_hints", controller.task.hint)
+            
+        add controller.task.filepic at:
+            pos (26, 72)
+                
+
+        hbox:
+            pos 28, 1026    
+            ysize 28
+            spacing 10
+            button:
+                xsize 78
+                action SetVariable("controller.panel_mode", "answer")
+                selected controller.panel_mode == "answer"
+                selected_background "python_tasks/answer_button_selected.png"
+                background "python_tasks/answer_button_idle.png"
+            
+            button:
+                xsize 87
+                action SetVariable("controller.panel_mode", "error")
+                selected controller.panel_mode == "error"
+                selected_background "python_tasks/error_button_selected.png"
+                background "python_tasks/error_button_idle.png"
+            
         
     showif controller.task_ended:
-        on "show" action FileTakeScreenshot()
-        use task_ended_screen(controller)
-
+        on "show" action [FileTakeScreenshot(), Show("task_ended_screen", None, controller)]
 
 screen task_ended_screen(controller):
     modal True
+    zorder 1
 
     add FileCurrentScreenshot() at blur
 
-    showif controller.task.right:
-        add "python_tasks/success.png" at task_ended_transform
-    else:
-        add "python_tasks/failure.png" at task_ended_transform
-
     imagebutton at zooming:
-        align .9, .5
+        pos .95, .5
         idle "python_tasks/next_task.png"
-        action [SetVariable("controller.current_task", controller.current_task + 1)]
+        action [If(controller.last_task, [Hide("python_tasks_screen", Fade(2.0, 0.0, 0.0, color="#fff")), Return(controller.right_tasks_rate)], SetVariable("controller.current_task", controller.current_task + 1)), Hide("task_ended_screen")]
+
+screen bottom_panel_screen(controller):
+    fixed:
+        yanchor 1.0
+        ypos 1.0
+        xysize 1870, 349
+        showif controller.panel_mode == "answer":
+            use variants_screen(controller)
+        elif controller.panel_mode == "error":
+            use error_screen(controller)
 
 
 screen variants_screen(controller):
-    fixed:
-        vbox:
+    frame:
+        background "python_tasks/variant_bg.png"
+        viewport:
+            mousewheel "vertical"
             ypos 30
-            spacing 50
-            hbox:
-                box_wrap True
-                spacing 100
-                for key in controller.task:
-                    vbox:
-                        label key:
-                            text_style "variants"
-                        imagebutton:
-                            if controller.task[key]:
-                                idle "python_tasks/radio_button_checked.png"
-                            else:
-                                idle "python_tasks/radio_button_idle.png"
-                            action Function(controller.task, key)
+            vbox:
+                text controller.task.question style "variants"
+                first_spacing 15
+                spacing 50
+                hbox:
+                    box_wrap True
+                    spacing 100
+                    for key in controller.task:
+                        vbox:
+                            label key:
+                                text_style "variants"
+                            imagebutton:
+                                if controller.task[key]:
+                                    idle "python_tasks/radio_button_checked.png"
+                                else:
+                                    idle "python_tasks/radio_button_idle.png"
+                                action Function(controller.task, key)
 
-            imagebutton at zooming:
-                xpos 30
-                idle "python_tasks/submit.png"
-                insensitive "python_tasks/submit_inactive.png"
-                sensitive controller.task.has_answer and not controller.task_ended
-                action [ToggleVariable("controller.task_ended"), Function(controller.task.set_right)]
+                imagebutton at zooming:
+                    xpos 40
+                    idle "python_tasks/submit.png"
+                    insensitive "python_tasks/submit_inactive.png"
+                    sensitive controller.task.has_answer
+                    action [controller.task.set_right, ToggleVariable("controller.task_ended")]
+
+
+screen error_screen(controller):
+    frame:
+        background "python_tasks/error_panel_bg.png"
+        viewport:
+            pos 66, 26
+            xysize 1795, 318
+            mousewheel "vertical"
+            draggable True
+            add "python_tasks/task_[controller.current_task]/error.png"
+
             
-        textbutton "Подсказка":
-            background "python_tasks/button_bg.png"
-            xysize 180, 100
-            pos 1680, 240
-            text_style "submit_button_text"
-            action SayOnScreen("task1_saying")
-            
 
-
-label task1_saying():
-    "{cps=20}Похоже, здесь что-то инициализируется. Но код поврежден...{/cps}" 
-    return
-
-label task2_saying():
-    "{cps=20}Хз че тут, еще не придумал{/cps}"
-    $ saying_ended = True     
+label task_hints(what):
+    python:
+        for phrase in what:
+            renpy.say("", "{cps=40}[phrase]{/cps}")
     return
 
 
 label python_tasks():
     "start"
-    $ controller = Controller()
     $ renpy.block_rollback()
-    call screen python_tasks_screen(controller)
+    $ roll_forward = renpy.roll_forward_info()
+    $ controller = Controller()
+
+    window hide
+    show screen python_tasks_screen(controller)
+
+    $ rate = ui.interact(roll_forward=roll_forward)
+    $ renpy.checkpoint(rate)
+
     "end"
     return
