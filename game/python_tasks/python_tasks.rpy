@@ -13,22 +13,22 @@ style variants:
 
 
 init -1 python:
+    import random
     from abc import ABC, abstractmethod
+
+
     class Task(ABC):
-        def __init__(self, variants, answer, filename, question="", *hint):
+        def __init__(self, variants, answer, filepic, question="", has_error=True, *hint):
             self.variants = variants
             self.answer = answer
             self.right = False
             self.hint = hint
             self.question = question
-            self.filepic = filename
+            self.filepic = filepic
+            self.has_error = has_error
         
         @abstractmethod
         def set_right(self):
-            pass
-
-        @abstractmethod
-        def __call__(self, variant):
             pass
 
     
@@ -56,6 +56,40 @@ init -1 python:
         def __iter__(self):
             return iter(self.variants.keys())
 
+    
+    class OrderTask(Task):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            random.shuffle(self.variants)
+
+        def set_right(self):
+            right = True
+            for i in range(len(self.variants)):
+                if i != self.variants[i][0]:
+                    right = False
+                    break
+            self.right = right
+
+        def last_var(self, item):
+            return item == len(self.variants) - 1
+
+        def first_var(self, item):
+            return item == 0
+
+        def __call__(self, variant, direction):
+            if self.last_var(variant) and direction == "down" or self.first_var(variant) and direction == "up":
+                return
+            if direction == "up":
+                self.variants[variant], self.variants[variant - 1] = self.variants[variant - 1], self.variants[variant]
+            elif direction == "down":
+                self.variants[variant], self.variants[variant + 1] = self.variants[variant + 1], self.variants[variant]
+
+        def __getitem__(self, item):
+            return self.variants[item][1]
+
+        def __len__(self):
+            return len(self.variants)
+
 
     class Controller:
         def __init__(self):
@@ -63,10 +97,11 @@ init -1 python:
             self.ans_panel = True
             self.__current_task = 0
             self.tasks = [
-                RadioTask({"os.getcwd()": False, "os.path.join()": False, "os.path.realpath()": False, "os.path.split()": False}, "os.path.join()", "python_tasks/task_0/filepic.png", "Какой метод следует применить, чтобы устанить ошибку?", "Похоже, система не может найти нужный файл. Проблема пожет быть в типе операционной системы. Стоит впомнить модуль os..."),
-                RadioTask({"__add__": False, "__mul__": False, "__sub__": False, "__str__": False}, "__sub__", "python_tasks/task_1/filepic.png", "Какого специального метода не хватает?", "А тут какой-то класс, описывающий таймер. Ошибка точно в методе {i}run(){/i}, в классе не хватает какого-то специального метода..."),
-                RadioTask({"list": False, "dict": False, "set": False, "frozenset": False}, "set", "python_tasks/task_2/filepic.png", "Какую коллекцию лучше всего использовать для переменной {i}visited{/i}?", "Похоже на рекурсивный алгоритм обхода графа, но отсутствует коллекция, в которую должны складываться уже посещенные узлы... Какую бы лучше использовать?", "Да еще и этот граф... Может быть, в нем содержится что-то важное?"),
-                RadioTask({"wb": False, "w": False, "r": False, "a": False}, "a", "python_tasks/task_3/filepic.png", "Какой аргумент нужно передать функции {i}open{/i}, чтобы декоратор работал правильно?", "Скорее всего, это декоратор, предназначенный для логгирования вызовов функций. Но функции {i}open{/i} вообще не передано тегов, показывающих, как работать с файлом логов, скорее всего, проблема в этом."),
+                RadioTask({"os.getcwd()": False, "os.path.join()": False, "os.path.realpath()": False, "os.path.split()": False}, "os.path.join()", "python_tasks/task_0/filepic.png", "Какой метод следует применить, чтобы устанить ошибку?", True, "Похоже, система не может найти нужный файл. Проблема пожет быть в типе операционной системы. Стоит впомнить модуль os..."),
+                RadioTask({"__add__": False, "__mul__": False, "__sub__": False, "__str__": False}, "__sub__", "python_tasks/task_1/filepic.png", "Какого специального метода не хватает?", True, "А тут какой-то класс, описывающий таймер. Ошибка точно в методе {i}run(){/i}, в классе не хватает какого-то специального метода..."),
+                RadioTask({"list": False, "dict": False, "set": False, "frozenset": False}, "set", "python_tasks/task_2/filepic.png", "Какую коллекцию лучше всего использовать для переменной {i}visited{/i}?", True, "Похоже на рекурсивный алгоритм обхода графа, но отсутствует коллекция, в которую должны складываться уже посещенные узлы... Какую бы лучше использовать?", "Да еще и этот граф... Может быть, в нем содержится что-то важное?"),
+                RadioTask({"\"wb\"": False, "\"w\"": False, "\"r\"": False, "\"a\"": False}, "a", "python_tasks/task_3/filepic.png", "Какой аргумент нужно передать функции {i}open{/i}, чтобы декоратор работал правильно?", True, "Скорее всего, это декоратор, предназначенный для логгирования вызовов функций. Но функции {i}open{/i} вообще не передано тегов, показывающих, как работать с файлом логов..."),
+                OrderTask([(0, "l1 = (char.upper() for char in part1)"), (1, "l2 = (char.lower() for char in part2)"), (2, "dividers = (random.choice(string.ascii_letters + string.punctuation) for _ in range(len(part1)))"), (3, "zipped = zip(l1, l2, dividers)"), (4, "result = (\"\".join(t) for t in zipped)"), (5, "return \"\".join(result)")], None, "python_tasks/task_4/filepic.png", "Расположите действия в правилном порядке.", False, "Эта функция, похоже, предназначена, чтобы закодировать строку, склеив её из двух других строк, но код настолько ужасен, что понять что-то в нем довольно сложно. Надо бы поправить."),
             ]
             self.panel_mode = "answer"
 
@@ -143,12 +178,13 @@ screen python_tasks_screen(controller):
                 selected_background "python_tasks/answer_button_selected.png"
                 background "python_tasks/answer_button_idle.png"
             
-            button:
-                xsize 87
-                action SetVariable("controller.panel_mode", "error")
-                selected controller.panel_mode == "error"
-                selected_background "python_tasks/error_button_selected.png"
-                background "python_tasks/error_button_idle.png"
+            showif controller.task.has_error:
+                button:
+                    xsize 87
+                    action SetVariable("controller.panel_mode", "error")
+                    selected controller.panel_mode == "error"
+                    selected_background "python_tasks/error_button_selected.png"
+                    background "python_tasks/error_button_idle.png"
             
         
     showif controller.task_ended:
@@ -167,8 +203,7 @@ screen task_ended_screen(controller):
 
 screen bottom_panel_screen(controller):
     fixed:
-        yanchor 1.0
-        ypos 1.0
+        ypos 541
         xysize 1870, 349
         showif controller.panel_mode == "answer":
             use variants_screen(controller)
@@ -182,30 +217,65 @@ screen variants_screen(controller):
         viewport:
             mousewheel "vertical"
             ypos 30
+            ysize 310
             vbox:
                 text controller.task.question style "variants"
                 first_spacing 15
                 spacing 50
-                hbox:
-                    box_wrap True
-                    spacing 100
-                    for key in controller.task:
-                        vbox:
-                            label key:
-                                text_style "variants"
-                            imagebutton:
-                                if controller.task[key]:
-                                    idle "python_tasks/radio_button_checked.png"
-                                else:
-                                    idle "python_tasks/radio_button_idle.png"
-                                action Function(controller.task, key)
+                vbox:
+                    spacing 20
+                    if isinstance(controller.task, RadioTask):
+                        use radio_task_variants_screen(controller)
+                    elif isinstance(controller.task, OrderTask):
+                        use order_task_variants_screen(controller)
 
                 imagebutton at zooming:
                     xpos 40
                     idle "python_tasks/submit.png"
                     insensitive "python_tasks/submit_inactive.png"
-                    sensitive controller.task.has_answer
+                    sensitive not hasattr(controller.task, "has_answer") or controller.task.has_answer
                     action [controller.task.set_right, ToggleVariable("controller.task_ended")]
+
+
+screen radio_task_variants_screen(controller):
+    for key in controller.task:
+        button:
+            action Function(controller.task, key)
+            hbox:
+                spacing 10
+                if controller.task[key]:
+                    add "python_tasks/radio_button_checked.png" at:
+                        yanchor .5
+                        ypos .5
+                else:
+                    add "python_tasks/radio_button_idle.png" at:
+                        yanchor .5
+                        ypos .5
+                label key:
+                    text_style "variants"
+
+
+screen order_task_variants_screen(controller):
+    for i in range(len(controller.task)):
+        frame:
+            background "#3c3f41"
+            hbox:
+                spacing 10
+                vbox:
+                    spacing 5
+                    imagebutton:
+                        idle "python_tasks/up.png"
+                        action [Function(controller.task, i, "up"), renpy.restart_interaction]
+                        sensitive not controller.task.first_var(i)
+                        insensitive "python_tasks/up_insensitive.png"
+                            
+                    imagebutton:
+                        idle "python_tasks/down.png"
+                        action [Function(controller.task, i, "down"), renpy.restart_interaction]
+                        sensitive not controller.task.last_var(i)
+                        insensitive "python_tasks/down_insensitive.png"
+                text controller.task[i] style "variants":
+                    size 26
 
 
 screen error_screen(controller):
@@ -216,7 +286,8 @@ screen error_screen(controller):
             xysize 1795, 318
             mousewheel "vertical"
             draggable True
-            add "python_tasks/task_[controller.current_task]/error.png"
+            if controller.task.has_error:
+                add "python_tasks/task_[controller.current_task]/error.png"
 
             
 
